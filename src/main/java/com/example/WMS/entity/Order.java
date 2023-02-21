@@ -8,7 +8,7 @@ import java.util.Date;
 
 @Builder
 @Data
-public class Order implements Serializable {
+public class Order {
 
     String orderId;
     Long createdDate;
