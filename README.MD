@@ -1,0 +1,1 @@
+The project is to keep track of stock of 1 item and perform inbound and outbound for the item. I shouldn't use a DB for this and so i have stored the order details and stock in a csv file. ACID properties should be maintained and history of orders and incoming goods should be kept track.
