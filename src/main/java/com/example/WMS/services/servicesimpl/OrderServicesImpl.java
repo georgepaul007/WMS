@@ -1,39 +1,51 @@
 package com.example.WMS.services.servicesimpl;
 
-import com.example.WMS.dtos.AddStockDescriptionDto;
+import com.example.WMS.dtos.ListOfOrderDescription;
 import com.example.WMS.dtos.OrderDescriptionDto;
 import com.example.WMS.dtos.OrderDto;
 import com.example.WMS.dtos.ValidationDto;
 import com.example.WMS.entity.Order;
 import com.example.WMS.entity.ProductDetails;
+import com.example.WMS.exceptions.OrderNotFound;
+import com.example.WMS.exceptions.ProductNotPresent;
 import com.example.WMS.handlers.OrderHandler;
 import com.example.WMS.handlers.ProductDetailsHandler;
-import com.example.WMS.handlers.ReadWriteHandler;
-import com.example.WMS.handlers.ReceiveOrdersHandler;
 import com.example.WMS.services.OrderServices;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
+@Slf4j
 public class OrderServicesImpl implements OrderServices {
+    @Autowired
+    OrderHandler orderHandler;
+    @Autowired
+    ProductDetailsHandler productDetailsHandler;
     public ValidationDto createOrder(OrderDto orderDto) {
+        ProductDetails productDetails = productDetailsHandler.getProductDetails();
+        log.info("Product details received from file are: {}", productDetails);
 
-        ProductDetails productDetails = ProductDetailsHandler.getProductDetails();
-//        Thread thread = new Thread(new ReadThread(productReader, "read"));
-//        thread.start();
-//        try{
-//            thread.join();
-//        }
-//        catch (Exception e) {
-//            System.out.println(e);
-//        }
-        System.out.println(productDetails.toString());
+        try {
+            if(productDetails == null) {
+                throw new ProductNotPresent();
+            }
+            log.info("Product details received from file are: {}", productDetails);
+        } catch (ProductNotPresent e) {
+            log.error("Product is not present! {}", e);
+            return ValidationDto.builder()
+                    .isValid(false)
+                    .reason("product not found")
+                    .build();
+        } catch (Exception e) {
+            log.error("Some error has occurred: {}", e);
+            return ValidationDto.builder()
+                    .isValid(false)
+                    .reason("Some error occurred")
+                    .build();
+        }
         if(productDetails.getQuantity() < orderDto.getQuantity()) {
             return ValidationDto.builder().isValid(false).reason("Not enough Quantity").build();
         }
@@ -45,26 +57,45 @@ public class OrderServicesImpl implements OrderServices {
                 .productId(orderDto.getProductId())
                 .quantity(orderDto.getQuantity())
                 .build();
-        OrderHandler orderHandler = new OrderHandler();
         orderHandler.write(order);
         productDetails.setQuantity(productDetails.getQuantity() - order.getQuantity());
         ProductDetailsHandler productReader = new ProductDetailsHandler();
         productReader.write(productDetails);
         return ValidationDto.builder().isValid(true).reason(uniqueID).build();
-//        try {
-//            Writer writer = Files.newBufferedWriter(Paths.get("/Users/georgepaul/Downloads/WMS/src/main/java/com/example/WMS/csv/Order.csv"));
-//        }
-//        catch (Exception e) {
-//            System.out.println("Error occurred while writing: " + e);
-//        }
-//        if()
     }
-    public OrderDescriptionDto findOrder(String orderId) {
-        OrderHandler orderHandler = new OrderHandler();
-        return orderHandler.read(orderId);
+    public ListOfOrderDescription findOrder(String orderId) {
+        OrderDescriptionDto orderDescriptionDto = orderHandler.read(orderId);
+        try {
+            if(orderDescriptionDto == null) {
+                throw new OrderNotFound();
+            }
+        } catch(OrderNotFound e) {
+            log.error("Order was not found!");
+            return ListOfOrderDescription.builder()
+                    .isPresent(false)
+                    .build();
+        }
+        return ListOfOrderDescription.builder()
+                .isPresent(true)
+                .orderDescriptionDtos(new ArrayList<>(Arrays.asList(orderDescriptionDto)))
+                .build();
+
     }
-    public List<OrderDescriptionDto> getAllOrder(String pageNo, String pageSize) {
-        OrderHandler ordersHandler = new OrderHandler();
-        return ordersHandler.readPage(pageNo, pageSize);
+    public ListOfOrderDescription getAllOrder(String pageNo, String pageSize) {
+        List<OrderDescriptionDto> orderDescriptionDtos = orderHandler.readPage(pageNo, pageSize);
+        try {
+            if(orderDescriptionDtos == null) {
+                throw new OrderNotFound();
+            }
+        } catch (OrderNotFound e) {
+            log.error("Page not found in database!");
+            return ListOfOrderDescription.builder()
+                    .isPresent(false)
+                    .build();
+        }
+        return ListOfOrderDescription.builder()
+                .isPresent(true)
+                .orderDescriptionDtos(new ArrayList<>(orderDescriptionDtos))
+                .build();
     }
 }

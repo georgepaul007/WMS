@@ -1,10 +1,7 @@
 package com.example.WMS.controller;
 
 
-import com.example.WMS.dtos.AddStockDescriptionDto;
-import com.example.WMS.dtos.OrderDescriptionDto;
-import com.example.WMS.dtos.OrderDto;
-import com.example.WMS.dtos.ValidationDto;
+import com.example.WMS.dtos.*;
 import com.example.WMS.services.OrderServices;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -27,11 +24,12 @@ public class OutboundController {
     }
 
     @GetMapping("/getOrder")
-    public ResponseEntity<OrderDescriptionDto> getOrder(@RequestParam String orderId) {
+    public ResponseEntity<ListOfOrderDescription> getOrder(@RequestParam String orderId) {
         return new ResponseEntity<>(orderServices.findOrder(orderId), HttpStatus.OK);
     }
-    @GetMapping("/getAllReceiveOrder")
-    public ResponseEntity<List<OrderDescriptionDto>> getAllReceiveOrder(@RequestParam String pageNo, @RequestParam String pageSize) {
+
+    @GetMapping("/getAllOrder")
+    public ResponseEntity<ListOfOrderDescription> getAllOrder(@RequestParam String pageNo, @RequestParam String pageSize) {
         return new ResponseEntity<>(orderServices.getAllOrder(pageNo, pageSize), HttpStatus.OK);
     }
 }
