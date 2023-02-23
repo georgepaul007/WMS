@@ -59,12 +59,24 @@ public class OrderServicesImpl implements OrderServices {
             } catch (CsvDataTypeMismatchException e) {
                 log.error("CSV and data do not match! {}", e);
                 e.printStackTrace();
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("CSV and data dont match! server error")
+                        .build();
             } catch (CsvRequiredFieldEmptyException e) {
                 log.error("A required field was empty! {}", e);
                 e.printStackTrace();
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("required field missing, server error!")
+                        .build();
             } catch (IOException e) {
                 log.error("Exception occurred while reading file! {}", e);
                 e.printStackTrace();
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Error occurred while reading file")
+                        .build();
             }
         }
         String uniqueID = UUID.randomUUID().toString();
@@ -122,6 +134,10 @@ public class OrderServicesImpl implements OrderServices {
                     .build();
         } catch (Exception e) {
             log.error("error occurred while reading values! {}", e);
+            return ListOfOrderDescription.builder()
+                    .isPresent(false)
+                    .reason("error occurred while reading file!")
+                    .build();
         }
         return ListOfOrderDescription.builder()
                 .isPresent(true)

@@ -27,6 +27,10 @@ public class ProductServicesImpl implements ProductServices {
             productDetails = productDetailsHandler.getProductDetails(name);
         } catch (IOException e) {
             log.error("Error occurred while reading for product details");
+            return ProductDetailsDto.builder()
+                    .reason("Error occurred while reading file!")
+                    .isPresent(false)
+                    .build();
         }
         if(productDetails == null) {
             return ProductDetailsDto.builder()
@@ -59,12 +63,24 @@ public class ProductServicesImpl implements ProductServices {
         } catch (CsvDataTypeMismatchException e) {
             log.error("CSV and data do not match! {}", e);
             e.printStackTrace();
+            return ValidationDto.builder()
+                    .isValid(false)
+                    .reason("CSV and data dont match! server error")
+                    .build();
         } catch (CsvRequiredFieldEmptyException e) {
             log.error("A required field was empty! {}", e);
             e.printStackTrace();
+            return ValidationDto.builder()
+                    .isValid(false)
+                    .reason("Required field missing, server error")
+                    .build();
         } catch (IOException e) {
             log.error("Exception occurred while reading file! {}", e);
             e.printStackTrace();
+            return ValidationDto.builder()
+                    .isValid(false)
+                    .reason("Error occurred while reading file")
+                    .build();
         }
         return null;
 

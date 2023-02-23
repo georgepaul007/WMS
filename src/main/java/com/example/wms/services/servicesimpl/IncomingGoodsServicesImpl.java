@@ -54,14 +54,27 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
             try {
                 productDetailsHandler.editProduct(productDetails);
             } catch (CsvDataTypeMismatchException e) {
+
                 log.error("CSV and data do not match! {}", e);
                 e.printStackTrace();
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("CSV Does not match! server error!")
+                        .build();
             } catch (CsvRequiredFieldEmptyException e) {
                 log.error("A required field was empty! {}", e);
                 e.printStackTrace();
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Empty required field! server error")
+                        .build();
             } catch (IOException e) {
                 log.error("Exception occurred while reading file! {}", e);
                 e.printStackTrace();
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Error occurred while reading file")
+                        .build();
             }
         }
         IncomingGoods incomingGoods = IncomingGoods.builder()
@@ -117,6 +130,10 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
                     .build();
         } catch (Exception e) {
             log.error("error occurred while reading values! {}", e);
+            return ListOfAddStock.builder()
+                    .isPresent(false)
+                    .reason("error occurred while reading file")
+                    .build();
         }
         return ListOfAddStock.builder()
                 .isPresent(true)
