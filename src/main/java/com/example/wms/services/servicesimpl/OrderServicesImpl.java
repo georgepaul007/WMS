@@ -35,22 +35,37 @@ public class OrderServicesImpl implements OrderServices {
 
     public ValidationDto createOrder(Integer quantity, String name) {
         ProductDetails productDetails = null;
-        try {
-            productDetails = productDetailsHandler.getProductDetails(name);
-        } catch (IOException e) {
-            log.error("Exception occurred while reading product details file: {}", e);
-        }
-        log.info("Product details received from file are: {}", productDetails);
-         if(productDetails == null) {
-             log.error("Product is not present!");
-             return ValidationDto.builder()
-                     .isValid(false)
-                     .reason("product not found")
-                     .build();
-         }
-         log.info("Product details received from file are: {}", productDetails);
-        if(productDetails.getQuantity() < quantity) {
-            return ValidationDto.builder().isValid(false).reason("Not enough Quantity").build();
+        synchronized (OrderServicesImpl.class) {
+            try {
+                productDetails = productDetailsHandler.getProductDetails(name);
+            } catch (IOException e) {
+                log.error("Exception occurred while reading product details file: {}", e);
+            }
+            log.info("Product details received from file are: {}", productDetails);
+            if (productDetails == null) {
+                log.error("Product is not present!");
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("product not found")
+                        .build();
+            }
+            log.info("Product details received from file are: {}", productDetails);
+            if(productDetails.getQuantity() < quantity) {
+                return ValidationDto.builder().isValid(false).reason("Not enough Quantity").build();
+            }
+            productDetails.setQuantity(productDetails.getQuantity() - quantity);
+            try {
+                productDetailsHandler.editProduct(productDetails);
+            } catch (CsvDataTypeMismatchException e) {
+                log.error("CSV and data do not match! {}", e);
+                e.printStackTrace();
+            } catch (CsvRequiredFieldEmptyException e) {
+                log.error("A required field was empty! {}", e);
+                e.printStackTrace();
+            } catch (IOException e) {
+                log.error("Exception occurred while reading file! {}", e);
+                e.printStackTrace();
+            }
         }
         String uniqueID = UUID.randomUUID().toString();
         Order order = Order.builder()
@@ -63,19 +78,7 @@ public class OrderServicesImpl implements OrderServices {
                 .quantity(quantity)
                 .build();
         orderHandler.write(order);
-        productDetails.setQuantity(productDetails.getQuantity() - order.getQuantity());
-        try {
-            productDetailsHandler.editProduct(productDetails);
-        } catch (CsvDataTypeMismatchException e) {
-            log.error("CSV and data do not match! {}", e);
-            e.printStackTrace();
-        } catch (CsvRequiredFieldEmptyException e) {
-            log.error("A required field was empty! {}", e);
-            e.printStackTrace();
-        } catch (IOException e) {
-            log.error("Exception occurred while reading file! {}", e);
-            e.printStackTrace();
-        }
+
         return ValidationDto.builder().isValid(true).reason(uniqueID).build();
     }
     public ListOfOrderDescription findOrder(String orderId) {

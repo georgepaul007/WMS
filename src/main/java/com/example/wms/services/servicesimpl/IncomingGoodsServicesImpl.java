@@ -36,16 +36,33 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
     public ValidationDto createIncomingGoods(Integer quantity, String name) {
         String uniqueID = UUID.randomUUID().toString();
         ProductDetails productDetails = null;
-        try {
-            productDetails = productDetailsHandler.getProductDetails(name);
-        } catch (Exception e) {
-            log.error("Error occurred while reading product details {}", e);
-        }
-        if(productDetails == null) {
-            return ValidationDto.builder()
-                    .reason("Product not found!")
-                    .isValid(false)
-                    .build();
+        synchronized (IncomingGoodsServices.class) {
+            try {
+                productDetails = productDetailsHandler.getProductDetails(name);
+            } catch (Exception e) {
+                log.error("Error occurred while reading product details {}", e);
+            }
+            if(productDetails == null) {
+                log.error("Product is not present!");
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("product not found")
+                        .build();
+            }
+            log.info("Product details received from file are: {}", productDetails);
+            productDetails.setQuantity(productDetails.getQuantity() + quantity);
+            try {
+                productDetailsHandler.editProduct(productDetails);
+            } catch (CsvDataTypeMismatchException e) {
+                log.error("CSV and data do not match! {}", e);
+                e.printStackTrace();
+            } catch (CsvRequiredFieldEmptyException e) {
+                log.error("A required field was empty! {}", e);
+                e.printStackTrace();
+            } catch (IOException e) {
+                log.error("Exception occurred while reading file! {}", e);
+                e.printStackTrace();
+            }
         }
         IncomingGoods incomingGoods = IncomingGoods.builder()
                 .incomingGoodsId(uniqueID)
@@ -53,24 +70,12 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
                 .merchantId(productDetails.getMerchantId())
                 .productId(productDetails.getProductId())
                 .quantity(quantity)
-                .newQuantity(quantity + productDetails.getQuantity())
-                .previousQuantity(productDetails.getQuantity())
+                .newQuantity(productDetails.getQuantity())
+                .previousQuantity(productDetails.getQuantity() - quantity)
                 .build();
         log.info("Product details received from file are: {}", productDetails);
         incomingGoodsHandler.write(incomingGoods);
-        productDetails.setQuantity(productDetails.getQuantity() + incomingGoods.getQuantity());
-        try {
-            productDetailsHandler.editProduct(productDetails);
-        } catch (CsvDataTypeMismatchException e) {
-            log.error("CSV and data do not match! {}", e);
-            e.printStackTrace();
-        } catch (CsvRequiredFieldEmptyException e) {
-            log.error("A required field was empty! {}", e);
-            e.printStackTrace();
-        } catch (IOException e) {
-            log.error("Exception occurred while reading file! {}", e);
-            e.printStackTrace();
-        }
+
         return ValidationDto.builder().isValid(true).reason(uniqueID).build();
     }
 
