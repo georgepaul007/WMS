@@ -32,4 +32,5 @@ public class IncomingGoods {
 
     @CsvBindByPosition(position = 6)
     Integer newQuantity;
+
 }

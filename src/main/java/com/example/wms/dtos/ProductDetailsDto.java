@@ -1,13 +1,20 @@
 package com.example.wms.dtos;
 
-import com.example.wms.entity.ProductDetails;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
 
 @Builder
 @Data
-public class ProductDetailsDto {
+@AllArgsConstructor
+@NoArgsConstructor
+public class ProductDetailsDto implements Serializable {
     Boolean isPresent;
     String reason;
     CurrentProductDetails productDetails;
+
+
 }

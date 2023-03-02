@@ -33,5 +33,7 @@ public class Order {
     @CsvBindByPosition(position = 6)
     Integer newQuantity;
 
+    @CsvBindByPosition(position = 7)
+    String status;
 
 }

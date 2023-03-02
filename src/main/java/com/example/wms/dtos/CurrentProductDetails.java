@@ -1,14 +1,17 @@
 package com.example.wms.dtos;
 
-import com.opencsv.bean.CsvBindByPosition;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.io.Serializable;
 
 @Data
 @Builder
-public class CurrentProductDetails {
+@AllArgsConstructor
+@NoArgsConstructor
+public class CurrentProductDetails implements Serializable {
     Integer quantity;
 
     String productId;

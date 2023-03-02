@@ -33,4 +33,6 @@ public class ProductDetails {
 
     @CsvBindByPosition(position = 6)
     Long lastIncomingGoods;
+
+
 }

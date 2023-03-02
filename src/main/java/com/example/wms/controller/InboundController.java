@@ -23,11 +23,14 @@ public class InboundController {
     @PostMapping("/createIncomingGoods")
     public ResponseEntity<ValidationDto> createIncomingGoods(@RequestParam Integer quantity, @RequestParam String name) {
         log.info("Quantity: {} Product Name: {}", quantity, name);
-        return new ResponseEntity<>(incomingGoodsServices.createIncomingGoods(quantity, name), HttpStatus.CREATED);
+//        String uniqueID = UUID.randomUUID().toString();
+        return new ResponseEntity<>(incomingGoodsServices.createIncomingGoods(quantity, name), HttpStatus.OK);
+//        ValidationDto validationDto = kafkaTemplate.send(topicName, AddIGDto.builder().name(name).quantity(quantity).build());
+
 
     }
 
-    @GetMapping("/getIncomingGoods")
+    @PostMapping("/getIncomingGoods")
     public ResponseEntity<ListOfAddStock> getIncomingGoods(@RequestParam String incomingGoodsId) {
         log.info("The received incoming goods ID: {}", incomingGoodsId);
         return new ResponseEntity<>(incomingGoodsServices.findIncomingGoods(incomingGoodsId), HttpStatus.OK);

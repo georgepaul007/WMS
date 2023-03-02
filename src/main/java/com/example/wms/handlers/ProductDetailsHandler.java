@@ -18,16 +18,20 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 @Slf4j
 public class ProductDetailsHandler {
+    static AtomicReference<ProductDetails> details = new AtomicReference<>();
+
     public ProductDetails getProductDetails(String name) throws IOException {
         try (Reader reader = Files.newBufferedReader(Paths.get(FilePaths.PRODUCT_DETAILS))) {
             CsvToBean<ProductDetails> csvToBean = new CsvToBeanBuilder(reader)
@@ -36,9 +40,9 @@ public class ProductDetailsHandler {
                     .build();
             Iterator<ProductDetails> csvProductIterator = csvToBean.iterator();
             while (csvProductIterator.hasNext()) {
-                ProductDetails details = csvProductIterator.next();
-                if (details.getProductName().equals(name)) {
-                    return details;
+                details.set(csvProductIterator.next());
+                if (details.get().getProductName().equals(name)) {
+                    return details.get();
                 }
             }
             return null;
@@ -47,25 +51,13 @@ public class ProductDetailsHandler {
     }
 
     public void editProduct(ProductDetails productDetails) throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException {
-        try (Reader reader = Files.newBufferedReader(Paths.get(FilePaths.PRODUCT_DETAILS))) {
+        Path path = Paths.get(FilePaths.PRODUCT_DETAILS);
+        try (Reader reader = Files.newBufferedReader(path)) {
             CsvToBean<ProductDetails> csvToBean = new CsvToBeanBuilder(reader)
                     .withType(ProductDetails.class)
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
             List<ProductDetails> csvProductList = csvToBean.parse();
-            ProductDetails detailsToBeRemoved = null;
-//            for (ProductDetails details : csvProductList) {
-//                if (details.getProductName().equals(productDetails.getProductName())) {
-//                    if (details.getQuantity() > productDetails.getQuantity()) {
-//                        productDetails.setLastOrder(new Date().getTime());
-//                    } else {
-//                        productDetails.setLastIncomingGoods(new Date().getTime());
-//                    }
-//                    detailsToBeRemoved = details;
-//                    csvProductList.add(productDetails);
-//                }
-//            }
-//            csvProductList.remove(detailsToBeRemoved);
             for(Iterator<ProductDetails> iterator = csvProductList.iterator(); iterator.hasNext(); ) {
                 ProductDetails details = iterator.next();
                 if (details.getProductName().equals(productDetails.getProductName())) {
@@ -78,7 +70,7 @@ public class ProductDetailsHandler {
                 }
             }
             csvProductList.add(productDetails);
-            try (Writer writer = Files.newBufferedWriter(Paths.get(FilePaths.PRODUCT_DETAILS))) {
+            try (Writer writer = Files.newBufferedWriter(path)) {
                 StatefulBeanToCsv<ProductDetails> sbc = new StatefulBeanToCsvBuilder(writer)
                         .withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)
                         .build();
@@ -94,15 +86,21 @@ public class ProductDetailsHandler {
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
             Iterator<ProductDetails> csvUserIterator = csvToBean.iterator();
-            while (csvUserIterator.hasNext()) {
-                ProductDetails productDetails1 = csvUserIterator.next();
-                if (productDetails1.getProductName().equals(productDetails.getProductName())) {
+//            csvUserIterator.forEachRemaining(productDetails1 -> {
+//                if(productDetails1.getProductName().equals(productDetails.getProductName())) {
+//
+//                }
+//            });
+            while(csvUserIterator.hasNext()) {
+                ProductDetails currentDetails = csvUserIterator.next();
+                if(currentDetails.getProductName().equals(productDetails.getProductName())) {
                     return ValidationDto.builder()
                             .isValid(false)
-                            .reason("Product Already exists, enter other name")
+                            .reason("Product Already Present")
                             .build();
                 }
             }
+
             try (Writer writer = Files.newBufferedWriter(Paths.get(FilePaths.PRODUCT_DETAILS), StandardOpenOption.APPEND)) {
                 StatefulBeanToCsv<ProductDetails> sbc = new StatefulBeanToCsvBuilder(writer)
                         .withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)

@@ -1,5 +1,6 @@
 package com.example.wms.services.servicesimpl;
 
+import com.example.wms.dtos.AddIGDto;
 import com.example.wms.dtos.AddStockDescriptionDto;
 import com.example.wms.dtos.ListOfAddStock;
 import com.example.wms.dtos.ValidationDto;
@@ -7,13 +8,20 @@ import com.example.wms.entity.IncomingGoods;
 import com.example.wms.entity.ProductDetails;
 import com.example.wms.exceptions.PageDoesNotContainValues;
 import com.example.wms.exceptions.PageNeedsToBeGreaterThanZero;
-import com.example.wms.handlers.ProductDetailsHandler;
 import com.example.wms.handlers.IncomingGoodsHandler;
+import com.example.wms.handlers.ProductDetailsHandler;
 import com.example.wms.services.IncomingGoodsServices;
+import com.example.wms.services.OrderServices;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.exceptions.CsvDataTypeMismatchException;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -21,74 +29,65 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 @Service
 @Slf4j
 public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
-
+    @Value("${topic.name.edit-product-details}")
+    private String topicName;
     @Autowired
     private IncomingGoodsHandler incomingGoodsHandler;
 
     @Autowired
+    private KafkaTemplate<String, AddIGDto> kafkaTemplate;
+
+    @Autowired
     private ProductDetailsHandler productDetailsHandler;
+
+
+    @Autowired
+    private OrderServices orderServices;
+    public static AtomicReference<ProductDetails> productDetails = new AtomicReference<>();
+
+    @KafkaListener(topics = "${topic.name.edit-product-details}", groupId = "group_id")
+    public void consume(ConsumerRecord<String, String> payload) throws JsonProcessingException {
+        log.info("topic is: {}", topicName);
+        String incomingGoodsOrOrder = payload.key();
+        ObjectMapper mapper = new ObjectMapper();
+        AddIGDto addIGDto = mapper.readValue(payload.value(), AddIGDto.class);
+        String uniqueID = addIGDto.getUUID();
+        if(incomingGoodsOrOrder.equals("incoming")) {
+            completeIncomingGoods(addIGDto);
+            return;
+        }
+        orderServices.completeOrder(addIGDto);
+
+    }
+
+
 
     public ValidationDto createIncomingGoods(Integer quantity, String name) {
         String uniqueID = UUID.randomUUID().toString();
-        ProductDetails productDetails = null;
-        synchronized (IncomingGoodsServices.class) {
-            try {
-                productDetails = productDetailsHandler.getProductDetails(name);
-            } catch (Exception e) {
-                log.error("Error occurred while reading product details {}", e);
-            }
-            if(productDetails == null) {
-                log.error("Product is not present!");
-                return ValidationDto.builder()
-                        .isValid(false)
-                        .reason("product not found")
-                        .build();
-            }
-            log.info("Product details received from file are: {}", productDetails);
-            productDetails.setQuantity(productDetails.getQuantity() + quantity);
-            try {
-                productDetailsHandler.editProduct(productDetails);
-            } catch (CsvDataTypeMismatchException e) {
 
-                log.error("CSV and data do not match! {}", e);
-                e.printStackTrace();
-                return ValidationDto.builder()
-                        .isValid(false)
-                        .reason("CSV Does not match! server error!")
-                        .build();
-            } catch (CsvRequiredFieldEmptyException e) {
-                log.error("A required field was empty! {}", e);
-                e.printStackTrace();
-                return ValidationDto.builder()
-                        .isValid(false)
-                        .reason("Empty required field! server error")
-                        .build();
-            } catch (IOException e) {
-                log.error("Exception occurred while reading file! {}", e);
-                e.printStackTrace();
-                return ValidationDto.builder()
-                        .isValid(false)
-                        .reason("Error occurred while reading file")
-                        .build();
-            }
+        try {
+            productDetails.set(productDetailsHandler.getProductDetails(name));
+        } catch (IOException e) {
+            log.error("Error while reading file... {}", e);
+            return ValidationDto.builder()
+                    .isValid(false)
+                    .reason("Error while reading products file")
+                    .build();
         }
-        IncomingGoods incomingGoods = IncomingGoods.builder()
-                .incomingGoodsId(uniqueID)
-                .createdDate(new Date().getTime())
-                .merchantId(productDetails.getMerchantId())
-                .productId(productDetails.getProductId())
-                .quantity(quantity)
-                .newQuantity(productDetails.getQuantity())
-                .previousQuantity(productDetails.getQuantity() - quantity)
-                .build();
-        log.info("Product details received from file are: {}", productDetails);
-        incomingGoodsHandler.write(incomingGoods);
-
+        if (productDetails == null) {
+            log.error("Product is not present!");
+            return ValidationDto.builder()
+                    .isValid(false)
+                    .reason("product not found")
+                    .build();
+        }
+        kafkaTemplate.send(topicName ,"incoming", AddIGDto.builder().UUID(uniqueID).name(name).quantity(quantity).build());
         return ValidationDto.builder().isValid(true).reason(uniqueID).build();
     }
 
@@ -139,5 +138,47 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
                 .isPresent(true)
                 .addStockDescriptionDtos(addStockDescriptionDtos)
                 .build();
+    }
+    public void completeIncomingGoods(AddIGDto addIGDto) {
+        try {
+                productDetails.set(productDetailsHandler.getProductDetails(addIGDto.getName()));
+            } catch (Exception e) {
+                e.printStackTrace();
+                log.error("Error occurred while reading product details");
+                return;
+            }
+            if(productDetails == null) {
+                log.error("Product is not present!");
+                return;
+            }
+            productDetails.get().setQuantity(productDetails.get().getQuantity() + addIGDto.getQuantity());
+            try {
+                productDetailsHandler.editProduct(productDetails.get());
+            } catch (CsvDataTypeMismatchException e) {
+
+                log.error("CSV and data do not match!");
+                e.printStackTrace();
+                return;
+            } catch (CsvRequiredFieldEmptyException e) {
+                log.error("A required field was empty!");
+                e.printStackTrace();
+                return;
+            } catch (IOException e) {
+                log.error("Exception occurred while reading file!");
+                e.printStackTrace();
+                return;
+            }
+
+        IncomingGoods incomingGoods = IncomingGoods.builder()
+                .incomingGoodsId(addIGDto.getUUID())
+                .createdDate(new Date().getTime())
+                .merchantId(productDetails.get().getMerchantId())
+                .productId(productDetails.get().getProductId())
+                .quantity(addIGDto.getQuantity())
+                .newQuantity(productDetails.get().getQuantity())
+                .previousQuantity(productDetails.get().getQuantity() - addIGDto.getQuantity())
+                .build();
+        log.info("Product details received from file are: {}", productDetails);
+        incomingGoodsHandler.write(incomingGoods);
     }
 }

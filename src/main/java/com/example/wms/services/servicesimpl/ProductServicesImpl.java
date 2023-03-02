@@ -22,7 +22,7 @@ public class ProductServicesImpl implements ProductServices {
     private ProductDetailsHandler productDetailsHandler;
 
     public ProductDetailsDto getProductDetails(String name) {
-        ProductDetails productDetails = null;
+        ProductDetails productDetails;
         try {
             productDetails = productDetailsHandler.getProductDetails(name);
         } catch (IOException e) {
@@ -47,6 +47,7 @@ public class ProductServicesImpl implements ProductServices {
                         .price(productDetails.getPrice())
                         .productId(productDetails.getProductId())
                         .productName(productDetails.getProductName())
+                        .quantity(productDetails.getQuantity())
                         .build())
                 .build();
     }
@@ -82,7 +83,5 @@ public class ProductServicesImpl implements ProductServices {
                     .reason("Error occurred while reading file")
                     .build();
         }
-        return null;
-
     }
 }

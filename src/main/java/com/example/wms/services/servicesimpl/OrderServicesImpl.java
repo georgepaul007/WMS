@@ -1,5 +1,6 @@
 package com.example.wms.services.servicesimpl;
 
+import com.example.wms.dtos.AddIGDto;
 import com.example.wms.dtos.ListOfOrderDescription;
 import com.example.wms.dtos.OrderDescriptionDto;
 import com.example.wms.dtos.ValidationDto;
@@ -15,6 +16,8 @@ import com.opencsv.exceptions.CsvDataTypeMismatchException;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -22,26 +25,46 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @Slf4j
 public class OrderServicesImpl implements OrderServices {
 
+    @Value("${topic.name.edit-product-details}")
+    private String topicName;
     @Autowired
-    private OrderHandler orderHandler;
+    private KafkaTemplate<String, AddIGDto> kafkaTemplate;
 
     @Autowired
     private ProductDetailsHandler productDetailsHandler;
+    @Autowired
+    private OrderHandler orderHandler;
 
+    public static AtomicReference<ProductDetails> productDetails = new AtomicReference<>();
+
+
+//    @KafkaListener(topics = "${topic.name.edit-product-details}", topicPartitions = @TopicPartition(topic = "${topic.name.edit-product-details}", partitions = "1"), groupId = "group_id")
+//    public void consume(ConsumerRecord<String, String> payload) throws JsonProcessingException {
+//        log.info("topic is: {}", topicName);
+//        String incomingGoodsOrOrder = payload.key();
+//        ObjectMapper mapper = new ObjectMapper();
+//        AddIGDto addIGDto = mapper.readValue(payload.value(), AddIGDto.class);
+//        String uniqueID = addIGDto.getUUID();
+//        completeOrder(addIGDto);
+//    }
     public ValidationDto createOrder(Integer quantity, String name) {
-        ProductDetails productDetails = null;
-        synchronized (OrderServicesImpl.class) {
+            String uniqueID = UUID.randomUUID().toString();
+
             try {
-                productDetails = productDetailsHandler.getProductDetails(name);
+                productDetails.set(productDetailsHandler.getProductDetails(name));
             } catch (IOException e) {
-                log.error("Exception occurred while reading product details file: {}", e);
+                log.error("Error while reading file... {}", e);
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Error while reading products file")
+                        .build();
             }
-            log.info("Product details received from file are: {}", productDetails);
             if (productDetails == null) {
                 log.error("Product is not present!");
                 return ValidationDto.builder()
@@ -49,50 +72,10 @@ public class OrderServicesImpl implements OrderServices {
                         .reason("product not found")
                         .build();
             }
-            log.info("Product details received from file are: {}", productDetails);
-            if(productDetails.getQuantity() < quantity) {
-                return ValidationDto.builder().isValid(false).reason("Not enough Quantity").build();
-            }
-            productDetails.setQuantity(productDetails.getQuantity() - quantity);
-            try {
-                productDetailsHandler.editProduct(productDetails);
-            } catch (CsvDataTypeMismatchException e) {
-                log.error("CSV and data do not match! {}", e);
-                e.printStackTrace();
-                return ValidationDto.builder()
-                        .isValid(false)
-                        .reason("CSV and data dont match! server error")
-                        .build();
-            } catch (CsvRequiredFieldEmptyException e) {
-                log.error("A required field was empty! {}", e);
-                e.printStackTrace();
-                return ValidationDto.builder()
-                        .isValid(false)
-                        .reason("required field missing, server error!")
-                        .build();
-            } catch (IOException e) {
-                log.error("Exception occurred while reading file! {}", e);
-                e.printStackTrace();
-                return ValidationDto.builder()
-                        .isValid(false)
-                        .reason("Error occurred while reading file")
-                        .build();
-            }
-        }
-        String uniqueID = UUID.randomUUID().toString();
-        Order order = Order.builder()
-                .orderId(uniqueID)
-                .createdDate(new Date().getTime())
-                .newQuantity(productDetails.getQuantity() - quantity)
-                .previousQuantity(productDetails.getQuantity())
-                .merchantId(productDetails.getMerchantId())
-                .productId(productDetails.getProductId())
-                .quantity(quantity)
-                .build();
-        orderHandler.write(order);
+        kafkaTemplate.send(topicName, "order", AddIGDto.builder().UUID(uniqueID).name(name).quantity(quantity).build());
 
-        return ValidationDto.builder().isValid(true).reason(uniqueID).build();
-    }
+            return ValidationDto.builder().isValid(true).reason(uniqueID).build();
+        }
     public ListOfOrderDescription findOrder(String orderId) {
         OrderDescriptionDto orderDescriptionDto = null;
         try {
@@ -143,5 +126,46 @@ public class OrderServicesImpl implements OrderServices {
                 .isPresent(true)
                 .orderDescriptionDtos(orderDescriptionDtos)
                 .build();
+    }
+    public void completeOrder(AddIGDto addIGDto) {
+        try {
+            productDetails.set(productDetailsHandler.getProductDetails(addIGDto.getName()));
+        } catch (IOException e) {
+            log.error("Error while reading file...");
+        }
+        if (productDetails == null) {
+            log.error("Product is not present!");
+        }
+        Order order = Order.builder()
+                .createdDate(new Date().getTime())
+                .orderId(addIGDto.getUUID())
+                .merchantId(productDetails.get().getMerchantId())
+                .productId(productDetails.get().getProductId())
+                .newQuantity(productDetails.get().getQuantity() + addIGDto.getQuantity())
+                .previousQuantity(productDetails.get().getQuantity())
+                .quantity(addIGDto.getQuantity())
+                .build();
+        if(productDetails.get().getQuantity() < addIGDto.getQuantity()) {
+            order.setStatus("Abandoned due to no stock");
+            orderHandler.write(order);
+            log.error("Not enough quantity while adding");
+            return;
+        }
+        productDetails.get().setQuantity(productDetails.get().getQuantity() - addIGDto.getQuantity());
+        try {
+            productDetailsHandler.editProduct(productDetails.get());
+        }catch (CsvDataTypeMismatchException e) {
+            log.error("CSV and data do not match! {}", e);
+            e.printStackTrace();
+        } catch (CsvRequiredFieldEmptyException e) {
+            log.error("A required field was empty! {}", e);
+            e.printStackTrace();
+        } catch (IOException e) {
+            log.error("Exception occurred while reading file! {}", e);
+            e.printStackTrace();
+        }
+        log.info("Product details received from file are: {}", productDetails);
+        order.setStatus("Successfully ordered!");
+        orderHandler.write(order);
     }
 }
