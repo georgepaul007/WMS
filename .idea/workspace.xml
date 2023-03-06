@@ -5,43 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="cb449959-8383-4580-b286-66a7222a72e9" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/jarRepositories.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_github_luben_zstd_jni_1_5_0_4.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__com_google_code_findbugs_jsr305_3_0_2.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__junit_junit_4_13_2.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_apache_kafka_kafka_clients_3_1_2.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_junit_vintage_junit_vintage_engine_5_8_2.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_lz4_lz4_java_1_8_0.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_springframework_kafka_spring_kafka_2_8_11.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_springframework_retry_spring_retry_1_3_4.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_springframework_spring_messaging_5_3_25.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_springframework_spring_tx_5_3_25.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/Maven__org_xerial_snappy_snappy_java_1_1_8_4.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/config/KafkaConsumerConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/config/KafkaProducerConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/config/KafkaTopicConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/dtos/AddIGDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/dtos/AddIGDtoDeserializer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/dtos/AddIGDtoSerializer.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/kafkalisteners/KafkaListenerProductDetails.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/example/wms/IncomingGoodsServicesTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/resources/ProductDetails.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/trial.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/trial.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/WmsApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/WmsApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/config/KafkaProducerConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/config/KafkaProducerConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/config/KafkaTopicConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/config/KafkaTopicConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/controller/InboundController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/controller/InboundController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/controller/OutboundController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/controller/OutboundController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/csv/IncomingGoods.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/csv/IncomingGoods.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/csv/Order.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/csv/Order.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/csv/ProductDetails.csv" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/csv/ProductDetails.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/dtos/CurrentProductDetails.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/dtos/CurrentProductDetails.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/dtos/ProductDetailsDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/dtos/ProductDetailsDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/entity/IncomingGoods.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/entity/IncomingGoods.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/entity/Order.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/entity/Order.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/entity/ProductDetails.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/entity/ProductDetails.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/handlers/OrderHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/handlers/OrderHandler.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/handlers/ProductDetailsHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/handlers/ProductDetailsHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/kafkalisteners/KafkaListenerProductDetails.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/kafkalisteners/KafkaListenerProductDetails.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/services/IncomingGoodsServices.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/services/IncomingGoodsServices.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/services/OrderServices.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/services/OrderServices.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/services/servicesimpl/IncomingGoodsServicesImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/services/servicesimpl/IncomingGoodsServicesImpl.java" afterDir="false" />
@@ -49,38 +23,15 @@
       <change beforePath="$PROJECT_DIR$/src/main/java/com/example/wms/services/servicesimpl/ProductServicesImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/wms/services/servicesimpl/ProductServicesImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/WmsApplication.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/WmsApplication.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/config/KafkaProducerConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/config/KafkaProducerConfig.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/config/KafkaTopicConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/config/KafkaTopicConfig.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/controller/InboundController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/controller/InboundController.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/controller/OutboundController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/controller/OutboundController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/controller/ProductController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/controller/ProductController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/AddProductDto.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/AddProductDto.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/AddStockDescriptionDto$AddStockDescriptionDtoBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/AddStockDescriptionDto$AddStockDescriptionDtoBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/AddStockDescriptionDto.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/AddStockDescriptionDto.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/CurrentProductDetails$CurrentProductDetailsBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/CurrentProductDetails$CurrentProductDetailsBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/CurrentProductDetails.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/CurrentProductDetails.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfAddStock$ListOfAddStockBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfAddStock$ListOfAddStockBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfAddStock.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfAddStock.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfOrderDescription$ListOfOrderDescriptionBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfOrderDescription$ListOfOrderDescriptionBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfOrderDescription.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ListOfOrderDescription.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/OrderDescriptionDto$OrderDescriptionDtoBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/OrderDescriptionDto$OrderDescriptionDtoBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/OrderDescriptionDto.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/OrderDescriptionDto.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ProductDetailsDto$ProductDetailsDtoBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ProductDetailsDto$ProductDetailsDtoBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ProductDetailsDto.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ProductDetailsDto.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ValidationDto$ValidationDtoBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ValidationDto$ValidationDtoBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ValidationDto.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/dtos/ValidationDto.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/IncomingGoods$IncomingGoodsBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/IncomingGoods$IncomingGoodsBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/IncomingGoods.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/IncomingGoods.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/Order$OrderBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/Order$OrderBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/Order.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/Order.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/ProductDetails$ProductDetailsBuilder.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/ProductDetails$ProductDetailsBuilder.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/ProductDetails.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/entity/ProductDetails.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/handlers/IncomingGoodsHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/handlers/IncomingGoodsHandler.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/handlers/OrderHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/handlers/OrderHandler.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/handlers/ProductDetailsHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/handlers/ProductDetailsHandler.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/handlers/ReadWriteHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/kafkalisteners/KafkaListenerProductDetails.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/kafkalisteners/KafkaListenerProductDetails.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/services/IncomingGoodsServices.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/services/IncomingGoodsServices.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/services/OrderServices.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/services/OrderServices.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/services/ProductServices.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/services/ProductServices.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/services/servicesimpl/IncomingGoodsServicesImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/services/servicesimpl/IncomingGoodsServicesImpl.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/services/servicesimpl/OrderServicesImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/services/servicesimpl/OrderServicesImpl.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/target/classes/com/example/WMS/services/servicesimpl/ProductServicesImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/example/WMS/services/servicesimpl/ProductServicesImpl.class" afterDir="false" />
@@ -329,13 +280,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_ADD_EXTERNAL_FILES": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "settings.editor.selected.configurable": "editor.preferences.import"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.import&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/src/main/java/com/example/wms/csv" />
@@ -503,6 +454,17 @@
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
     </layout>
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
   </component>
@@ -510,13 +472,8 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/example/wms/handlers/OrderHandler.java</url>
-          <line>83</line>
-          <option name="timeStamp" value="17" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/src/main/java/com/example/wms/services/servicesimpl/ProductServicesImpl.java</url>
-          <line>26</line>
+          <line>47</line>
           <option name="timeStamp" value="27" />
         </line-breakpoint>
       </breakpoints>

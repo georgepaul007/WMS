@@ -6,7 +6,7 @@ import com.example.wms.dtos.ListOfAddStock;
 import com.example.wms.dtos.ValidationDto;
 
 public interface IncomingGoodsServices {
-    ValidationDto createIncomingGoods(Integer quantity, String name);
+    ValidationDto createIncomingGoodsOrOrder(Integer quantity, String name, String orderOrIG);
 //    void checkIncomingGoods(AddIGDto addIGDto);
     ListOfAddStock findIncomingGoods(String incomingGoodsId);
     ListOfAddStock getAllIncomingGoods(Integer pageNo, Integer pageSize);

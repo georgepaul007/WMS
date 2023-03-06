@@ -2,8 +2,11 @@ package com.example.wms.handlers;
 
 
 import com.example.wms.constants.FilePaths;
+import com.example.wms.dtos.AddIGDto;
 import com.example.wms.dtos.ValidationDto;
 import com.example.wms.entity.ProductDetails;
+import com.example.wms.services.IncomingGoodsServices;
+import com.example.wms.services.OrderServices;
 import com.opencsv.CSVWriter;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
@@ -12,6 +15,7 @@ import com.opencsv.bean.StatefulBeanToCsvBuilder;
 import com.opencsv.exceptions.CsvDataTypeMismatchException;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -31,6 +35,11 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 public class ProductDetailsHandler {
     static AtomicReference<ProductDetails> details = new AtomicReference<>();
+    @Autowired
+    private IncomingGoodsServices incomingGoodsServices;
+
+    @Autowired
+    private OrderServices orderServices;
 
     public ProductDetails getProductDetails(String name) throws IOException {
         try (Reader reader = Files.newBufferedReader(Paths.get(FilePaths.PRODUCT_DETAILS))) {
@@ -50,7 +59,7 @@ public class ProductDetailsHandler {
         }
     }
 
-    public void editProduct(ProductDetails productDetails) throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException {
+    public void editProduct(ProductDetails productDetails, String uuid) throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException {
         Path path = Paths.get(FilePaths.PRODUCT_DETAILS);
         try (Reader reader = Files.newBufferedReader(path)) {
             CsvToBean<ProductDetails> csvToBean = new CsvToBeanBuilder(reader)
@@ -62,8 +71,27 @@ public class ProductDetailsHandler {
                 ProductDetails details = iterator.next();
                 if (details.getProductName().equals(productDetails.getProductName())) {
                     if (details.getQuantity() > productDetails.getQuantity()) {
+                        if (productDetails.getQuantity() < 0) {
+                            orderServices.completeOrder(AddIGDto.builder()
+                                    .UUID(uuid)
+                                    .quantity(details.getQuantity() - productDetails.getQuantity())
+                                    .name(details.getProductName())
+                                    .build());
+                            return;
+                        }
+                        orderServices.completeOrder(AddIGDto.builder()
+                                        .UUID(uuid)
+                                        .quantity(details.getQuantity() - productDetails.getQuantity())
+                                        .name(details.getProductName())
+                                .build());
                         productDetails.setLastOrder(new Date().getTime());
+
                     } else {
+                        incomingGoodsServices.completeIncomingGoods(AddIGDto.builder()
+                                        .UUID(uuid)
+                                        .quantity(productDetails.getQuantity() - details.getQuantity())
+                                        .name(productDetails.getProductName())
+                                .build());
                         productDetails.setLastIncomingGoods(new Date().getTime());
                     }
                     iterator.remove();
@@ -86,11 +114,6 @@ public class ProductDetailsHandler {
                     .withIgnoreLeadingWhiteSpace(true)
                     .build();
             Iterator<ProductDetails> csvUserIterator = csvToBean.iterator();
-//            csvUserIterator.forEachRemaining(productDetails1 -> {
-//                if(productDetails1.getProductName().equals(productDetails.getProductName())) {
-//
-//                }
-//            });
             while(csvUserIterator.hasNext()) {
                 ProductDetails currentDetails = csvUserIterator.next();
                 if(currentDetails.getProductName().equals(productDetails.getProductName())) {
@@ -100,7 +123,6 @@ public class ProductDetailsHandler {
                             .build();
                 }
             }
-
             try (Writer writer = Files.newBufferedWriter(Paths.get(FilePaths.PRODUCT_DETAILS), StandardOpenOption.APPEND)) {
                 StatefulBeanToCsv<ProductDetails> sbc = new StatefulBeanToCsvBuilder(writer)
                         .withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)

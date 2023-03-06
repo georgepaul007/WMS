@@ -20,7 +20,6 @@ import java.io.IOException;
 public class ProductServicesImpl implements ProductServices {
     @Autowired
     private ProductDetailsHandler productDetailsHandler;
-
     public ProductDetailsDto getProductDetails(String name) {
         ProductDetails productDetails;
         try {
@@ -62,21 +61,21 @@ public class ProductServicesImpl implements ProductServices {
         try {
             return productDetailsHandler.addProduct(productDetails);
         } catch (CsvDataTypeMismatchException e) {
-            log.error("CSV and data do not match! {}", e);
+            log.error("CSV and data do not match!");
             e.printStackTrace();
             return ValidationDto.builder()
                     .isValid(false)
                     .reason("CSV and data dont match! server error")
                     .build();
         } catch (CsvRequiredFieldEmptyException e) {
-            log.error("A required field was empty! {}", e);
+            log.error("A required field was empty!");
             e.printStackTrace();
             return ValidationDto.builder()
                     .isValid(false)
                     .reason("Required field missing, server error")
                     .build();
         } catch (IOException e) {
-            log.error("Exception occurred while reading file! {}", e);
+            log.error("Exception occurred while reading file!");
             e.printStackTrace();
             return ValidationDto.builder()
                     .isValid(false)

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -62,8 +63,32 @@ public class OrderHandler {
             sbc.write(Arrays.asList(order));
         }
         catch (Exception e) {
-            log.error("Some error occurred! {}", e);
+            log.error("Some error occurred!");
         }
+    }
+    public List<OrderDescriptionDto> readPageByStatus(String status, Integer pageNo, Integer pageSize) throws IOException, PageDoesNotContainValues, PageNeedsToBeGreaterThanZero {
+        List<OrderDescriptionDto> orderDescriptionDtos = new ArrayList<>();
+        if(pageNo < 1 || pageSize < 1) {
+            log.error("PageNo and pagesize needs to be greater than 0");
+            throw new PageNeedsToBeGreaterThanZero();
+        }
+        try (Reader reader = Files.newBufferedReader(Paths.get(FilePaths.ORDER))) {
+            CsvToBean<Order> csvToBean = new CsvToBeanBuilder(reader)
+                    .withType(Order.class)
+                    .withIgnoreLeadingWhiteSpace(true)
+                    .build();
+            List<Order> csvOrderDetails = csvToBean.parse();
+            orderDescriptionDtos = csvOrderDetails.stream().filter(order -> order.getStatus().equals(status)).skip((pageNo - 1) * pageSize).limit(pageSize).map(order -> OrderDescriptionDto.builder()
+                    .createdDate(new java.util.Date(order.getCreatedDate()).toString())
+                    .orderId(order.getOrderId())
+                    .merchantId(order.getMerchantId())
+                    .productId(order.getProductId())
+                    .quantity(order.getQuantity())
+                    .newQuantity(order.getNewQuantity())
+                    .previousQuantity(order.getPreviousQuantity())
+                    .build()).collect(Collectors.toList());
+        }
+        return orderDescriptionDtos;
     }
     public List<OrderDescriptionDto> readPage(Integer pageNo, Integer pageSize) throws IOException, PageDoesNotContainValues, PageNeedsToBeGreaterThanZero{
         List<OrderDescriptionDto> orderDescriptionDtos = new ArrayList<>();
