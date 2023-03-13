@@ -1,146 +1,165 @@
 package com.example.wms.services.servicesimpl;
 
-import com.example.wms.dtos.AddIGDto;
+import com.example.wms.dtos.ChangeQuantityDto;
 import com.example.wms.dtos.ListOfOrderDescription;
-import com.example.wms.dtos.OrderDescriptionDto;
-import com.example.wms.entity.Order;
+import com.example.wms.dtos.ValidationDto;
+import com.example.wms.entity.Orders;
 import com.example.wms.entity.ProductDetails;
-import com.example.wms.exceptions.OrderNotFound;
-import com.example.wms.exceptions.PageDoesNotContainValues;
-import com.example.wms.exceptions.PageNeedsToBeGreaterThanZero;
-import com.example.wms.handlers.OrderHandler;
-import com.example.wms.handlers.ProductDetailsHandler;
+import com.example.wms.entity.ProductOrders;
+import com.example.wms.repo.OrderRepository;
+import com.example.wms.repo.ProductDetailsRepository;
+import com.example.wms.repo.ProductOrdersRepository;
 import com.example.wms.services.OrderServices;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class OrderServicesImpl implements OrderServices {
-
-    @Value("${topic.name.edit-product-details}")
-    private String topicName;
-
+    @Autowired
+    private ProductDetailsRepository productDetailsRepository;
 
     @Autowired
-    private ProductDetailsHandler productDetailsHandler;
+    private OrderRepository orderRepository;
+
     @Autowired
-    private OrderHandler orderHandler;
+    private ProductOrdersRepository productOrdersRepository;
 
     public static AtomicReference<ProductDetails> productDetails = new AtomicReference<>();
     public ListOfOrderDescription findOrder(String orderId) {
-        OrderDescriptionDto orderDescriptionDto = null;
-        try {
-            orderDescriptionDto = orderHandler.read(orderId);
-        } catch (IOException e) {
-            log.error("Error occurred while adding order details! {}", e);
-        }
-        try {
-            if(orderDescriptionDto == null) {
-                throw new OrderNotFound();
-            }
-        } catch(OrderNotFound e) {
-            log.error("Order was not found!");
+        Optional<Orders> orders = orderRepository.findById(orderId);
+        if(orders.isPresent()) {
             return ListOfOrderDescription.builder()
-                    .isPresent(false)
+                    .ordersList(Arrays.asList(orders.get()))
+                    .isPresent(true)
                     .build();
         }
         return ListOfOrderDescription.builder()
-                .isPresent(true)
-                .orderDescriptionDtos(Arrays.asList(orderDescriptionDto))
+                .isPresent(false)
+                .reason("order not present with id")
                 .build();
-
     }
     public ListOfOrderDescription getAllOrder(Integer pageNo, Integer pageSize) {
-        List<OrderDescriptionDto> orderDescriptionDtos = null;
-        try {
-            orderDescriptionDtos = orderHandler.readPage(pageNo, pageSize);
-        } catch (PageDoesNotContainValues e) {
-            log.error("Page does not contain any values!");
+        if(pageNo < 0 || pageSize < 0) {
+            log.error("PageNo and pagesize needs to be greater than 0");
             return ListOfOrderDescription.builder()
                     .isPresent(false)
-                    .reason("page has no entries")
+                    .reason("PageNo and pagesize needs to be greater than 0")
                     .build();
-        } catch (PageNeedsToBeGreaterThanZero e) {
-            log.error("PageNo and pagesize needs to be greater than 0!");
+        }
+        Pageable pageable = PageRequest.of(pageNo, pageSize);
+        Page<Orders> ordersList = orderRepository.findAll(pageable);
+        if (ordersList.isEmpty()) {
+            log.error("Page was empty");
             return ListOfOrderDescription.builder()
                     .isPresent(false)
-                    .reason("Pageno or pagesize lesser than 1")
-                    .build();
-        } catch (Exception e) {
-            log.error("error occurred while reading values!");
-            return ListOfOrderDescription.builder()
-                    .isPresent(false)
-                    .reason("error occurred while reading file!")
+                    .reason("Page was empty")
                     .build();
         }
         return ListOfOrderDescription.builder()
                 .isPresent(true)
-                .orderDescriptionDtos(orderDescriptionDtos)
+                .ordersList(ordersList.get().collect(Collectors.toList()))
                 .build();
     }
-    public void completeOrder(AddIGDto addIGDto) {
-        try {
-            productDetails.set(productDetailsHandler.getProductDetails(addIGDto.getName()));
-        } catch (IOException e) {
-            log.error("Error while reading file...");
-        }
+    public boolean completeOrder(ChangeQuantityDto changeQuantityDto) {
+        productDetails.set(productDetailsRepository.findByProductName(changeQuantityDto.getName()).get());
         if (productDetails == null) {
             log.error("Product is not present!");
         }
-        Order order = Order.builder()
+        Orders order = Orders.builder()
                 .createdDate(new Date().getTime())
-                .orderId(addIGDto.getUUID())
-                .merchantId(productDetails.get().getMerchantId())
-                .productId(productDetails.get().getProductId())
-                .newQuantity(productDetails.get().getQuantity() - addIGDto.getQuantity())
-                .previousQuantity(productDetails.get().getQuantity())
-                .quantity(addIGDto.getQuantity())
+                .orderId(changeQuantityDto.getUUID())
                 .build();
-        if(productDetails.get().getQuantity() < addIGDto.getQuantity()) {
-            order.setStatus("Abandoned due to no stock");
-            orderHandler.write(order);
+        Integer orderedQuantity = productOrdersRepository.findTotalQuantityOrdered(productDetails.get().getProductName());
+        if(productDetails.get().getQuantity() - orderedQuantity < changeQuantityDto.getQuantity()) {
+            order.setStatus("NO STOCK");
+            orderRepository.save(order);
             log.error("Not enough quantity while adding");
-            return;
+            return false;
         }
-        order.setStatus("Successfully ordered!");
-        orderHandler.write(order);
+        order.setStatus("OPEN");
+        ProductOrders productOrders = new ProductOrders();
+        productOrders.setQuantity(changeQuantityDto.getQuantity());
+        productOrders.setOrder(order);
+        productOrders.setProductName(changeQuantityDto.getName());
+        if(!orderRepository.existsByOrderId(changeQuantityDto.getUUID())) {
+            orderRepository.save(order);
+        }
+        productDetails.get().setLastOrder(new Date().getTime());
+        productDetailsRepository.save(productDetails.get());
+        productOrdersRepository.save(productOrders);
+        return true;
     }
     public ListOfOrderDescription getByStatus(String status, Integer pageNo, Integer pageSize) {
-        List<OrderDescriptionDto> orderDescriptionDtos = null;
-        try {
-            orderDescriptionDtos = orderHandler.readPageByStatus(status, pageNo, pageSize);
-        } catch (PageDoesNotContainValues e) {
-            log.error("Page does not contain any values!");
+        if(pageNo < 0 || pageSize < 0) {
+            log.error("PageNo and pagesize needs to be greater than 0");
             return ListOfOrderDescription.builder()
-                .isPresent(false)
-                .reason("page has no entries")
-                .build();
-        } catch (PageNeedsToBeGreaterThanZero e) {
-            log.error("PageNo and pagesize needs to be greater than 0!");
-            return ListOfOrderDescription.builder()
-                .isPresent(false)
-                .reason("Pageno or pagesize lesser than 1")
-                .build();
-        } catch (Exception e) {
-            log.error("error occurred while reading values!", e);
-            e.printStackTrace();
-            return ListOfOrderDescription.builder()
-                .isPresent(false)
-                .reason("error occurred while reading file!")
-                .build();
+                    .isPresent(false)
+                    .reason("PageNo and pagesize needs to be greater than 0")
+                    .build();
         }
-            return ListOfOrderDescription.builder()
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by("createdDate"));
+        List<Orders> ordersList = orderRepository.findByStatus(status, pageable);
+        return ListOfOrderDescription.builder()
                 .isPresent(true)
-                .orderDescriptionDtos(orderDescriptionDtos)
+                .ordersList(ordersList)
+                .build();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ValidationDto pickItem(String productName, String orderId) {
+        Optional<Orders> order = orderRepository.findById(orderId);
+        Optional<ProductDetails> productDetails1 = productDetailsRepository.findByProductName(productName);
+        List<ProductOrders> productOrdersList = productOrdersRepository.findByOrderId(orderId);
+        Optional<ProductOrders> productOrders = productOrdersRepository.findByOrderIdAndProductName(orderId, productName);
+        if(!productDetails1.isPresent()) {
+            log.error("Product not present!");
+            return ValidationDto.builder()
+                    .reason("Product Not Present")
+                    .isValid(false)
+                    .build();
+        }
+        if(!order.isPresent()) {
+            log.error("Order not present!");
+            return ValidationDto.builder()
+                    .reason("Product Not Present")
+                    .isValid(false)
+                    .build();
+        }
+        if(productOrders.isPresent()) {
+            productDetails1.get().setQuantity(productDetails1.get().getQuantity() - productOrders.get().getQuantity());
+            productDetailsRepository.save(productDetails1.get());
+            productOrdersRepository.delete(productOrders.get());
+            productOrdersList.remove(productOrders.get());
+            if(productOrdersList.isEmpty()) {
+                order.get().setStatus("SUCCESSFUL");
+                return ValidationDto.builder()
+                        .reason("All items picked!")
+                        .isValid(true)
+                        .build();
+            }
+            order.get().setStatus("PARTIALLY PICKED");
+            return ValidationDto.builder()
+                    .reason("picked single item")
+                    .isValid(true)
+                    .build();
+        }
+        return ValidationDto.builder()
+                .reason("Product not present in order")
+                .isValid(false)
                 .build();
     }
 

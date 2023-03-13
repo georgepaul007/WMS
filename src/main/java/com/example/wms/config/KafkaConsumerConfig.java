@@ -1,6 +1,6 @@
 package com.example.wms.config;
 
-import com.example.wms.dtos.AddIGDto;
+import com.example.wms.dtos.ChangeQuantityDto;
 import com.example.wms.dtos.AddIGDtoDeserializer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -19,7 +19,7 @@ public class KafkaConsumerConfig {
     @Value(value = "${spring.kafka.consumer.bootstrap-servers}")
     private String bootstrapAddress;
     @Bean
-    public ConsumerFactory<String, AddIGDto> consumerFactory() {
+    public ConsumerFactory<String, ChangeQuantityDto> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);

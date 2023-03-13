@@ -1,36 +1,36 @@
 package com.example.wms.entity;
 
-import com.opencsv.bean.CsvBindByPosition;
+import com.sun.istack.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import java.io.Serializable;
+
 @Builder
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class IncomingGoods {
+@Entity
+@Table
+public class IncomingGoods implements Serializable {
 
-    @CsvBindByPosition(position = 0)
-    String incomingGoodsId;
+    @NotNull
+    @Column( name = "incoming_goods_id", unique = true)
+    @Id
+    private String incomingGoodsId;
 
-    @CsvBindByPosition(position = 4)
-    Long createdDate;
+    @NotNull
+    @Column( name = "created_date")
+    private Long createdDate;
 
-    @CsvBindByPosition(position = 1)
-    String productId;
+    @Column(name = "status")
+    private String status;
 
-    @CsvBindByPosition(position = 2)
-    String merchantId;
-
-    @CsvBindByPosition(position = 3)
-    Integer quantity;
-
-    @CsvBindByPosition(position = 5)
-    Integer previousQuantity;
-
-    @CsvBindByPosition(position = 6)
-    Integer newQuantity;
 
 }

@@ -1,29 +1,34 @@
 package com.example.wms.services.servicesimpl;
 
-import com.example.wms.dtos.AddIGDto;
-import com.example.wms.dtos.AddStockDescriptionDto;
+import com.example.wms.dtos.ChangeQuantityDto;
 import com.example.wms.dtos.ListOfAddStock;
+import com.example.wms.dtos.ListOfOrderItem;
+import com.example.wms.dtos.SingleOrderItem;
 import com.example.wms.dtos.ValidationDto;
 import com.example.wms.entity.IncomingGoods;
 import com.example.wms.entity.ProductDetails;
-import com.example.wms.exceptions.PageDoesNotContainValues;
-import com.example.wms.exceptions.PageNeedsToBeGreaterThanZero;
-import com.example.wms.handlers.IncomingGoodsHandler;
-import com.example.wms.handlers.ProductDetailsHandler;
+import com.example.wms.entity.ProductIncoming;
+import com.example.wms.repo.IncomingGoodsRepository;
+import com.example.wms.repo.ProductDetailsRepository;
+import com.example.wms.repo.ProductIncomingRepository;
 import com.example.wms.services.IncomingGoodsServices;
-import com.example.wms.services.OrderServices;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -32,138 +37,142 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
     @Value("${topic.name.edit-product-details}")
     private String topicName;
     @Autowired
-    private IncomingGoodsHandler incomingGoodsHandler;
-
-    @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
-
     @Autowired
-    private ProductDetailsHandler productDetailsHandler;
-
-
+    private IncomingGoodsRepository incomingGoodsRepository;
     @Autowired
-    private OrderServices orderServices;
+    private ProductIncomingRepository productIncomingRepository;
+    @Autowired
+    private ProductDetailsRepository productDetailsRepository;
     public static AtomicReference<ProductDetails> productDetails = new AtomicReference<>();
-
-//    @KafkaListener(topics = "${topic.name.edit-product-details}", groupId = "group_id")
-//    public void consume(ConsumerRecord<String, String> payload) throws JsonProcessingException {
-//        log.info("topic is: {}", topicName);
-//        String incomingGoodsOrOrder = payload.key();
-//        ObjectMapper mapper = new ObjectMapper();
-//        AddIGDto addIGDto = mapper.readValue(payload.value(), AddIGDto.class);
-//        if (incomingGoodsOrOrder.equals("incoming")) {
-//            completeIncomingGoods(addIGDto);
-//            return;
-//        }
-//        orderServices.completeOrder(addIGDto);
-//    }
-
-
-
-    public ValidationDto createIncomingGoodsOrOrder(Integer quantity, String name, String orderOrIG) {
+    public ValidationDto createIncomingGoodsOrOrder(ListOfOrderItem listOfOrderItem, String orderOrIG) {
         String uniqueID = UUID.randomUUID().toString();
-        try {
-            productDetails.set(productDetailsHandler.getProductDetails(name));
-        } catch (IOException e) {
-            log.error("Error while reading file...");
-            return ValidationDto.builder()
-                    .isValid(false)
-                    .reason("Error while reading products file")
-                    .build();
-        }
-        if (productDetails == null) {
-            log.error("Product is not present!");
-            return ValidationDto.builder()
-                    .isValid(false)
-                    .reason("product not found")
-                    .build();
-        }
-        if(orderOrIG.equals("incoming")) {
-            kafkaTemplate.send(topicName, "incoming", AddIGDto.builder().UUID(uniqueID).name(name).quantity(quantity).build());
-        } else {
-            kafkaTemplate.send(topicName, "order", AddIGDto.builder().UUID(uniqueID).name(name).quantity(quantity).build());
+        for (SingleOrderItem singleOrderItem: listOfOrderItem.getSingleOrderItemList()) {
+            if (singleOrderItem.getQuantity() < 1) {
+                log.error("Quantity was not positive!");
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Quantity must be positive!")
+                        .build();
+            }
+            productDetails.set(productDetailsRepository.findByProductName(singleOrderItem.getProductName()).get());
+            if (productDetails.get() == null) {
+                log.error("product not present!");
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Product not present")
+                        .build();
+            }
+            if (orderOrIG.equals("incoming")) {
+                log.info("Sending kafka incoming!");
+                kafkaTemplate.send(topicName, singleOrderItem.getProductName(), ChangeQuantityDto.builder().UUID(uniqueID).name(singleOrderItem.getProductName()).quantity(singleOrderItem.getQuantity()).incomingOrOrder("incoming").build());
+            } else {
+                log.info("Sending kafka Order!");
+                kafkaTemplate.send(topicName, singleOrderItem.getProductName(), ChangeQuantityDto.builder().incomingOrOrder("order").UUID(uniqueID).name(singleOrderItem.getProductName()).quantity(singleOrderItem.getQuantity()).build());
+            }
         }
         return ValidationDto.builder().isValid(true).reason(uniqueID).build();
     }
 
     public ListOfAddStock findIncomingGoods(String incomingGoodsId) {
-        AddStockDescriptionDto addStockDescriptionDtos = null;
-        try {
-            addStockDescriptionDtos = incomingGoodsHandler.read(incomingGoodsId);
-        } catch(IOException e) {
-            e.printStackTrace();
-            log.error("Error while reading incoming goods!");
-        }
-        if (addStockDescriptionDtos == null) {
-            log.error("Page not found in database!");
+        Optional<IncomingGoods> incomingGoods = incomingGoodsRepository.findById(incomingGoodsId);
+        if(incomingGoods.isPresent()) {
             return ListOfAddStock.builder()
-                    .isPresent(false)
+                    .incomingGoodsList(Arrays.asList(incomingGoods.get()))
+                    .isPresent(true)
                     .build();
-            }
-
+        }
         return ListOfAddStock.builder()
-                .isPresent(true)
-                .addStockDescriptionDtos(Arrays.asList(addStockDescriptionDtos))
+                .isPresent(false)
+                .reason("order not present with id")
                 .build();
     }
 
     public ListOfAddStock getAllIncomingGoods(Integer pageNo, Integer pageSize) {
-        List<AddStockDescriptionDto> addStockDescriptionDtos = null;
-        try {
-            addStockDescriptionDtos = incomingGoodsHandler.readPage(pageNo, pageSize);
-        } catch (PageDoesNotContainValues e) {
-            e.printStackTrace();
-            log.error("Page does not contain any values!");
+        if(pageNo < 0 || pageSize < 0) {
+            log.error("PageNo and pagesize needs to be greater than 0");
             return ListOfAddStock.builder()
                     .isPresent(false)
-                    .reason("page has no entries")
+                    .reason("PageNo and pagesize needs to be greater than 0")
                     .build();
-        } catch (PageNeedsToBeGreaterThanZero e) {
-            e.printStackTrace();
-            log.error("PageNo and pagesize needs to be greater than 0!");
+        }
+        Pageable pageable = PageRequest.of(pageNo, pageSize);
+        Page<IncomingGoods> incomingGoodsPage = incomingGoodsRepository.findAll(pageable);
+        if (incomingGoodsPage.isEmpty()) {
+            log.error("Page was empty");
             return ListOfAddStock.builder()
                     .isPresent(false)
-                    .reason("Pageno or pagesize lesser than 1")
-                    .build();
-        } catch (Exception e) {
-            e.printStackTrace();
-            log.error("error occurred while reading values!");
-            return ListOfAddStock.builder()
-                    .isPresent(false)
-                    .reason("error occurred while reading file")
+                    .reason("Page was empty")
                     .build();
         }
         return ListOfAddStock.builder()
                 .isPresent(true)
-                .addStockDescriptionDtos(addStockDescriptionDtos)
+                .incomingGoodsList(incomingGoodsPage.get().collect(Collectors.toList()))
                 .build();
     }
-    public void completeIncomingGoods(AddIGDto addIGDto) {
-            try {
-                productDetails.set(productDetailsHandler.getProductDetails(addIGDto.getName()));
-            } catch (Exception e) {
-                e.printStackTrace();
-                log.error("Error occurred while reading product details");
-                return;
-            }
-            if (productDetails == null) {
-                log.error("Product is not present!");
-                return;
-            }
-
-                IncomingGoods incomingGoods = IncomingGoods.builder()
-                        .incomingGoodsId(addIGDto.getUUID())
-                        .createdDate(new Date().getTime())
-                        .merchantId(productDetails.get().getMerchantId())
-                        .productId(productDetails.get().getProductId())
-                        .quantity(addIGDto.getQuantity())
-                        .newQuantity(productDetails.get().getQuantity())
-                        .previousQuantity(productDetails.get().getQuantity())
+    public boolean completeIncomingGoods(ChangeQuantityDto changeQuantityDto) {
+        productDetails.set(productDetailsRepository.findByProductName(changeQuantityDto.getName()).get());
+        if (productDetails == null) {
+            log.error("Product is not present!");
+        }
+        IncomingGoods incomingGoods = IncomingGoods.builder()
+                .createdDate(new Date().getTime())
+                .incomingGoodsId(changeQuantityDto.getUUID())
+                .build();
+        incomingGoods.setStatus("SHIPPED");
+        ProductIncoming productIncoming = new ProductIncoming();
+        productIncoming.setQuantity(changeQuantityDto.getQuantity());
+        productIncoming.setIncoming(incomingGoods);
+        productIncoming.setProductName(changeQuantityDto.getName());
+        if(!incomingGoodsRepository.existsById(changeQuantityDto.getUUID())) {
+            incomingGoodsRepository.save(incomingGoods);
+        }
+        productDetails.get().setLastIncomingGoods(new Date().getTime());
+        productDetailsRepository.save(productDetails.get());
+        productIncomingRepository.save(productIncoming);
+        return true;
+    }
+    @Transactional(rollbackFor = Exception.class)
+    public ValidationDto putawayItem(String productName, String incomingGoodsId) {
+        Optional<IncomingGoods> incomingGoods = incomingGoodsRepository.findById(incomingGoodsId);
+        Optional<ProductDetails> productDetails1 = productDetailsRepository.findByProductName(productName);
+        Optional<ProductIncoming> productIncoming = productIncomingRepository.findByIncomingIdAndProductName(incomingGoodsId, productName);
+        List<ProductIncoming> productIncomingList = productIncomingRepository.findByIncomingId(incomingGoodsId);
+        if(!productDetails1.isPresent()) {
+            log.error("Product not present!");
+            return ValidationDto.builder()
+                    .reason("Product Not Present")
+                    .isValid(false)
+                    .build();
+        }
+        if(!incomingGoods.isPresent()) {
+            log.error("Order not present!");
+            return ValidationDto.builder()
+                    .reason("Product Not Present")
+                    .isValid(false)
+                    .build();
+        }
+        if(productIncoming.isPresent()) {
+            productDetails1.get().setQuantity(productDetails1.get().getQuantity() + productIncoming.get().getQuantity());
+            productDetailsRepository.save(productDetails1.get());
+            productIncomingRepository.delete(productIncoming.get());
+            productIncomingList.remove(productIncoming.get());
+            if(productIncomingList.isEmpty()) {
+                incomingGoods.get().setStatus("PACKED ALL");
+                return ValidationDto.builder()
+                        .reason("All items put away!")
+                        .isValid(true)
                         .build();
-                log.info("Product details received from file are: {}", productDetails);
-                incomingGoodsHandler.write(incomingGoods);
-
-
-
+            }
+            incomingGoods.get().setStatus("PARTIALLY PUTAWAY");
+            return ValidationDto.builder()
+                    .reason("put away single item")
+                    .isValid(true)
+                    .build();
+        }
+        return ValidationDto.builder()
+                .reason("Product not present in order")
+                .isValid(false)
+                .build();
     }
 }
