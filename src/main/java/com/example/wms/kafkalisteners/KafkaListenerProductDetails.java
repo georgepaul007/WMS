@@ -38,14 +38,7 @@ public class KafkaListenerProductDetails {
     private String productTopic;
     @Autowired
     private ProductDetailsRepository productDetailsRepository;
-    @KafkaListener(topics = "${topic.name.edit-product-details}", groupId = "group_id")
-    public void consume(ConsumerRecord<String, String> payload) throws JsonProcessingException {
-        log.info("topic is: {}", topicName);
-        String productName = payload.key();
-        ObjectMapper mapper = new ObjectMapper();
-        ChangeQuantityDto changeQuantityDto = mapper.readValue(payload.value(), ChangeQuantityDto.class);
-        kafkaTemplate.send(productTopic, changeQuantityDto.getName(), changeQuantityDto);
-    }
+
     @KafkaListener(topics = "${topic.name.product}", groupId = "group_id")
     public void consume1(ConsumerRecord<String, String> payload) throws JsonProcessingException{
         ObjectMapper mapper = new ObjectMapper();
@@ -56,10 +49,10 @@ public class KafkaListenerProductDetails {
             log.error("Product Not Present");
             return;
         }
-        if(changeQuantityDto.getIncomingOrOrder().equals("order")) {
-            orderServices.completeOrder(changeQuantityDto);
+        if(changeQuantityDto.isOrder()) {
+            orderServices.pickItem(changeQuantityDto.getName(),changeQuantityDto.getUUID() ,changeQuantityDto.getQuantity());
         } else {
-            incomingGoodsServices.completeIncomingGoods(changeQuantityDto);
+            incomingGoodsServices.putawayItem(changeQuantityDto.getName(), changeQuantityDto.getUUID(), changeQuantityDto.getQuantity());
         }
     }
 }

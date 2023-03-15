@@ -1,6 +1,7 @@
 package com.example.wms.controller;
 
 
+import com.example.wms.dtos.ChangeQuantityDto;
 import com.example.wms.dtos.ListOfOrderDescription;
 import com.example.wms.dtos.ListOfOrderItem;
 import com.example.wms.dtos.ValidationDto;
@@ -8,8 +9,10 @@ import com.example.wms.services.IncomingGoodsServices;
 import com.example.wms.services.OrderServices;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,13 +26,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class OutboundController {
     @Autowired
     private OrderServices orderServices;
-
+    @Value("${topic.name.product}")
+    private String topicName;
     @Autowired
-    private IncomingGoodsServices incomingGoodsServices;
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @PostMapping("/createOrder")
     public ResponseEntity<ValidationDto> makeOrder(@RequestBody ListOfOrderItem listOfOrderItem) {
-            ValidationDto valid = incomingGoodsServices.createIncomingGoodsOrOrder(listOfOrderItem, "order");
+            ValidationDto valid = orderServices.createOrder(listOfOrderItem);
             return new ResponseEntity<>(valid, HttpStatus.CREATED);
     }
 
@@ -50,7 +54,16 @@ public class OutboundController {
     }
 
     @PostMapping("/pickItem")
-    public ResponseEntity<ValidationDto> pickItem(@RequestParam String productName, @RequestParam String orderId) {
-        return new ResponseEntity<>(orderServices.pickItem(productName, orderId), HttpStatus.OK);
+    public ResponseEntity<ValidationDto> pickItem(@RequestParam String productName, @RequestParam String orderId, @RequestParam Integer quantity) {
+        kafkaTemplate.send(topicName, productName, ChangeQuantityDto.builder()
+                .name(productName)
+                .UUID(orderId)
+                .isOrder(true)
+                .quantity(quantity)
+                .build());
+        return new ResponseEntity<>(ValidationDto.builder()
+                .isValid(true)
+                .reason("sent to pick item")
+                .build(), HttpStatus.OK);
     }
 }

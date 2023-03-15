@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -27,5 +28,13 @@ public class ProductIncoming {
     @JoinColumn(name = "incoming_goods_id", referencedColumnName = "incoming_goods_id")
     private IncomingGoods incoming;
 
+    @Column(name = "quantity")
     private Integer quantity;
+
+
+    @Column(name = "is_picked")
+    private boolean isPutaway = false;
+
+    @Column(name = "quantity_picked")
+    private Integer quantityPutaway;
 }

@@ -14,5 +14,5 @@ public class ChangeQuantityDto {
     Integer quantity;
     String name;
 
-    String incomingOrOrder;
+    boolean isOrder;
 }

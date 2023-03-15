@@ -7,10 +7,10 @@ import com.example.wms.dtos.ListOfOrderItem;
 import com.example.wms.dtos.ValidationDto;
 
 public interface IncomingGoodsServices {
-    ValidationDto createIncomingGoodsOrOrder(ListOfOrderItem listOfOrderItem, String orderOrIG);
+    ValidationDto createIncomingGoods(ListOfOrderItem listOfOrderItem);
 //    void checkIncomingGoods(AddIGDto addIGDto);
     ListOfAddStock findIncomingGoods(String incomingGoodsId);
     ListOfAddStock getAllIncomingGoods(Integer pageNo, Integer pageSize);
     boolean completeIncomingGoods(ChangeQuantityDto changeQuantityDto);
-    ValidationDto putawayItem(String productName, String incomingGoodsId);
+    void putawayItem(String productName, String incomingGoodsId, Integer quantity);
 }

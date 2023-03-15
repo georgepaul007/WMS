@@ -6,8 +6,10 @@ import com.example.wms.dtos.ListOfOrderItem;
 import com.example.wms.dtos.SingleOrderItem;
 import com.example.wms.dtos.ValidationDto;
 import com.example.wms.entity.IncomingGoods;
+import com.example.wms.entity.Orders;
 import com.example.wms.entity.ProductDetails;
 import com.example.wms.entity.ProductIncoming;
+import com.example.wms.entity.ProductOrders;
 import com.example.wms.repo.IncomingGoodsRepository;
 import com.example.wms.repo.ProductDetailsRepository;
 import com.example.wms.repo.ProductIncomingRepository;
@@ -34,10 +36,6 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
-    @Value("${topic.name.edit-product-details}")
-    private String topicName;
-    @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
     @Autowired
     private IncomingGoodsRepository incomingGoodsRepository;
     @Autowired
@@ -45,7 +43,7 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
     @Autowired
     private ProductDetailsRepository productDetailsRepository;
     public static AtomicReference<ProductDetails> productDetails = new AtomicReference<>();
-    public ValidationDto createIncomingGoodsOrOrder(ListOfOrderItem listOfOrderItem, String orderOrIG) {
+    public ValidationDto createIncomingGoods(ListOfOrderItem listOfOrderItem) {
         String uniqueID = UUID.randomUUID().toString();
         for (SingleOrderItem singleOrderItem: listOfOrderItem.getSingleOrderItemList()) {
             if (singleOrderItem.getQuantity() < 1) {
@@ -63,13 +61,21 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
                         .reason("Product not present")
                         .build();
             }
-            if (orderOrIG.equals("incoming")) {
-                log.info("Sending kafka incoming!");
-                kafkaTemplate.send(topicName, singleOrderItem.getProductName(), ChangeQuantityDto.builder().UUID(uniqueID).name(singleOrderItem.getProductName()).quantity(singleOrderItem.getQuantity()).incomingOrOrder("incoming").build());
-            } else {
-                log.info("Sending kafka Order!");
-                kafkaTemplate.send(topicName, singleOrderItem.getProductName(), ChangeQuantityDto.builder().incomingOrOrder("order").UUID(uniqueID).name(singleOrderItem.getProductName()).quantity(singleOrderItem.getQuantity()).build());
+            IncomingGoods incomingGoods = IncomingGoods.builder()
+                    .createdDate(new Date().getTime())
+                    .incomingGoodsId(uniqueID)
+                    .build();
+            incomingGoods.setStatus("SHIPPED");
+            ProductIncoming productIncoming = new ProductIncoming();
+            productIncoming.setQuantity(singleOrderItem.getQuantity());
+            productIncoming.setIncoming(incomingGoods);
+            productIncoming.setProductName(singleOrderItem.getProductName());
+            if(!incomingGoodsRepository.existsById(uniqueID)) {
+                incomingGoodsRepository.save(incomingGoods);
             }
+            productDetails.get().setLastIncomingGoods(new Date().getTime());
+            productDetailsRepository.save(productDetails.get());
+            productIncomingRepository.save(productIncoming);
         }
         return ValidationDto.builder().isValid(true).reason(uniqueID).build();
     }
@@ -111,7 +117,8 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
                 .build();
     }
     public boolean completeIncomingGoods(ChangeQuantityDto changeQuantityDto) {
-        productDetails.set(productDetailsRepository.findByProductName(changeQuantityDto.getName()).get());
+        productDetails.set(productDetailsRepository
+                .findByProductName(changeQuantityDto.getName()).get());
         if (productDetails == null) {
             log.error("Product is not present!");
         }
@@ -133,46 +140,43 @@ public class IncomingGoodsServicesImpl implements IncomingGoodsServices {
         return true;
     }
     @Transactional(rollbackFor = Exception.class)
-    public ValidationDto putawayItem(String productName, String incomingGoodsId) {
+    public void putawayItem(String productName, String incomingGoodsId, Integer quantity) {
         Optional<IncomingGoods> incomingGoods = incomingGoodsRepository.findById(incomingGoodsId);
         Optional<ProductDetails> productDetails1 = productDetailsRepository.findByProductName(productName);
-        Optional<ProductIncoming> productIncoming = productIncomingRepository.findByIncomingIdAndProductName(incomingGoodsId, productName);
         List<ProductIncoming> productIncomingList = productIncomingRepository.findByIncomingId(incomingGoodsId);
+        Optional<ProductIncoming> productIncoming = productIncomingRepository.findByIncomingIdAndProductName(incomingGoodsId, productName);
         if(!productDetails1.isPresent()) {
             log.error("Product not present!");
-            return ValidationDto.builder()
-                    .reason("Product Not Present")
-                    .isValid(false)
-                    .build();
+            return;
         }
         if(!incomingGoods.isPresent()) {
-            log.error("Order not present!");
-            return ValidationDto.builder()
-                    .reason("Product Not Present")
-                    .isValid(false)
-                    .build();
+            log.error("Incoming Goods not present!");
         }
-        if(productIncoming.isPresent()) {
-            productDetails1.get().setQuantity(productDetails1.get().getQuantity() + productIncoming.get().getQuantity());
-            productDetailsRepository.save(productDetails1.get());
-            productIncomingRepository.delete(productIncoming.get());
-            productIncomingList.remove(productIncoming.get());
-            if(productIncomingList.isEmpty()) {
-                incomingGoods.get().setStatus("PACKED ALL");
-                return ValidationDto.builder()
-                        .reason("All items put away!")
-                        .isValid(true)
-                        .build();
+        if(!productIncoming.isPresent()) {
+            log.error("Product is not present in incoming goods!");
+            return;
+        }
+        if((quantity + productIncoming.get().getQuantityPutaway()) > productIncoming.get().getQuantity()) {
+            log.error("Quantity putaway cannot be higher than quantity needed!");
+            return;
+        }
+        productDetails1.get().setQuantity(productDetails1.get().getQuantity() + quantity);
+        productIncoming.get().setQuantityPutaway(productIncoming.get().getQuantityPutaway() + quantity);
+        if(productIncoming.get().getQuantityPutaway().equals(productIncoming.get().getQuantity())) {
+            productIncoming.get().setPutaway(true);
+            List<ProductIncoming> isAllPutaway = productIncomingList.stream().filter(productIncoming1 -> {
+                if (productIncoming1.getProductName().equals(productIncoming.get().getProductName()))
+                    return false;
+                return !productIncoming1.isPutaway();
+            }).collect(Collectors.toList());
+            if(isAllPutaway.isEmpty()) {
+                incomingGoods.get().setStatus("FULLY PUTAWAY");
+                return;
             }
+            productIncoming.get().setPutaway(true);
             incomingGoods.get().setStatus("PARTIALLY PUTAWAY");
-            return ValidationDto.builder()
-                    .reason("put away single item")
-                    .isValid(true)
-                    .build();
+            return;
         }
-        return ValidationDto.builder()
-                .reason("Product not present in order")
-                .isValid(false)
-                .build();
+        incomingGoods.get().setStatus("PARTIALLY PUTAWAY");
     }
 }

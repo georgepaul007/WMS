@@ -2,9 +2,13 @@ package com.example.wms.services.servicesimpl;
 
 import com.example.wms.dtos.ChangeQuantityDto;
 import com.example.wms.dtos.ListOfOrderDescription;
+import com.example.wms.dtos.ListOfOrderItem;
+import com.example.wms.dtos.SingleOrderItem;
 import com.example.wms.dtos.ValidationDto;
+import com.example.wms.entity.IncomingGoods;
 import com.example.wms.entity.Orders;
 import com.example.wms.entity.ProductDetails;
+import com.example.wms.entity.ProductIncoming;
 import com.example.wms.entity.ProductOrders;
 import com.example.wms.repo.OrderRepository;
 import com.example.wms.repo.ProductDetailsRepository;
@@ -23,6 +27,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -39,6 +44,49 @@ public class OrderServicesImpl implements OrderServices {
     private ProductOrdersRepository productOrdersRepository;
 
     public static AtomicReference<ProductDetails> productDetails = new AtomicReference<>();
+    public ValidationDto createOrder(ListOfOrderItem listOfOrderItem) {
+        String uniqueID = UUID.randomUUID().toString();
+        for (SingleOrderItem singleOrderItem: listOfOrderItem.getSingleOrderItemList()) {
+            if (singleOrderItem.getQuantity() < 1) {
+                log.error("Quantity was not positive!");
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Quantity must be positive!")
+                        .build();
+            }
+            productDetails.set(productDetailsRepository.findByProductName(singleOrderItem.getProductName()).get());
+            if (productDetails.get() == null) {
+                log.error("product not present!");
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Product not present")
+                        .build();
+            }
+            if(singleOrderItem.getQuantity() > (productDetails.get().getQuantity() - productOrdersRepository.findTotalQuantityOrdered(singleOrderItem.getProductName()))) {
+                log.error("Not enough quantity, with product and product orders");
+                return ValidationDto.builder()
+                        .isValid(false)
+                        .reason("Not enough Quantity")
+                        .build();
+            }
+            Orders orders = Orders.builder()
+                    .createdDate(new Date().getTime())
+                    .orderId(uniqueID)
+                    .build();
+            orders.setStatus("OPEN");
+            ProductOrders productOrders = new ProductOrders();
+            productOrders.setQuantity(singleOrderItem.getQuantity());
+            productOrders.setOrder(orders);
+            productOrders.setProductName(singleOrderItem.getProductName());
+            if(!orderRepository.existsById(uniqueID)) {
+                orderRepository.save(orders);
+            }
+            productDetails.get().setLastOrder(new Date().getTime());
+            productDetailsRepository.save(productDetails.get());
+            productOrdersRepository.save(productOrders);
+        }
+        return ValidationDto.builder().isValid(true).reason(uniqueID).build();
+    }
     public ListOfOrderDescription findOrder(String orderId) {
         Optional<Orders> orders = orderRepository.findById(orderId);
         if(orders.isPresent()) {
@@ -74,6 +122,7 @@ public class OrderServicesImpl implements OrderServices {
                 .ordersList(ordersList.get().collect(Collectors.toList()))
                 .build();
     }
+
     public boolean completeOrder(ChangeQuantityDto changeQuantityDto) {
         productDetails.set(productDetailsRepository.findByProductName(changeQuantityDto.getName()).get());
         if (productDetails == null) {
@@ -120,47 +169,65 @@ public class OrderServicesImpl implements OrderServices {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ValidationDto pickItem(String productName, String orderId) {
+    public void pickItem(String productName, String orderId, Integer quantity) {
         Optional<Orders> order = orderRepository.findById(orderId);
         Optional<ProductDetails> productDetails1 = productDetailsRepository.findByProductName(productName);
         List<ProductOrders> productOrdersList = productOrdersRepository.findByOrderId(orderId);
         Optional<ProductOrders> productOrders = productOrdersRepository.findByOrderIdAndProductName(orderId, productName);
         if(!productDetails1.isPresent()) {
             log.error("Product not present!");
-            return ValidationDto.builder()
-                    .reason("Product Not Present")
-                    .isValid(false)
-                    .build();
+            return;
         }
         if(!order.isPresent()) {
             log.error("Order not present!");
-            return ValidationDto.builder()
-                    .reason("Product Not Present")
-                    .isValid(false)
-                    .build();
+            return;
         }
-        if(productOrders.isPresent()) {
-            productDetails1.get().setQuantity(productDetails1.get().getQuantity() - productOrders.get().getQuantity());
-            productDetailsRepository.save(productDetails1.get());
-            productOrdersRepository.delete(productOrders.get());
-            productOrdersList.remove(productOrders.get());
-            if(productOrdersList.isEmpty()) {
-                order.get().setStatus("SUCCESSFUL");
-                return ValidationDto.builder()
-                        .reason("All items picked!")
-                        .isValid(true)
-                        .build();
+        if(!productOrders.isPresent()) {
+            log.error("Product is not present in order!");
+            return;
+        }
+        if(productOrders.get().isRejectedOrder()) {
+            log.error("Order is already rejected! ");
+            return;
+        }
+        if((quantity + productOrders.get().getQuantityPicked()) > productOrders.get().getQuantity()) {
+            log.error("Quantity picked cannot be higher than quantity needed!");
+            return;
+        }
+        if(quantity > productDetails1.get().getQuantity()) {
+            order.get().setStatus("NO STOCK");
+            productOrdersList = productOrdersList.stream().map(productOrders1 -> {
+                productOrders1.setRejectedOrder(true);
+                if (productOrders1.getQuantityPicked() > 0) {
+                    productOrders1.setPicked(false);
+                    Optional<ProductDetails> productDetailsOptional = productDetailsRepository.findByProductName(productOrders1.getProductName());
+                    productDetailsOptional.get().setQuantity(productDetailsOptional.get().getQuantity() + productOrders1.getQuantityPicked());
+                    productOrders1.setQuantityPicked(0);
+                    return productOrders1;
+                }
+                return productOrders1;
+            }).collect(Collectors.toList());
+            log.error("quantity not enough, putting back picked items in order!");
+            return;
+        }
+        productDetails1.get().setQuantity(productDetails1.get().getQuantity() - quantity);
+        productOrders.get().setQuantityPicked(productOrders.get().getQuantityPicked() + quantity);
+        if(productOrders.get().getQuantityPicked().equals(productOrders.get().getQuantity())) {
+            productOrders.get().setPicked(true);
+            List<ProductOrders> isAllPicked = productOrdersList.stream().filter(productOrders1 -> {
+                if (productOrders1.getProductName().equals(productOrders.get().getProductName()))
+                    return false;
+                return !productOrders1.isPicked();
+            }).collect(Collectors.toList());
+            if(isAllPicked.isEmpty()) {
+                order.get().setStatus("FULLY PICKED");
+                return;
             }
+            productOrders.get().setPicked(true);
             order.get().setStatus("PARTIALLY PICKED");
-            return ValidationDto.builder()
-                    .reason("picked single item")
-                    .isValid(true)
-                    .build();
+            return;
         }
-        return ValidationDto.builder()
-                .reason("Product not present in order")
-                .isValid(false)
-                .build();
+        order.get().setStatus("PARTIALLY PICKED");
     }
 
 }

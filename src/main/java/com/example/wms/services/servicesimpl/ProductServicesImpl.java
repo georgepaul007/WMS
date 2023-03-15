@@ -35,7 +35,7 @@ public class ProductServicesImpl implements ProductServices {
                     .build();
         }
 
-        return ProductDetailsDto.builder().isPresent(false).build();
+        return ProductDetailsDto.builder().isPresent(false).reason("product exists").build();
     }
     public ValidationDto addProduct(AddProductDto addProductDto) {
         ProductDetails productDetails = ProductDetails.builder()

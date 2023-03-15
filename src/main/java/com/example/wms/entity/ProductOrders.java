@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -30,7 +31,17 @@ public class ProductOrders implements Serializable {
     @JoinColumn(name = "order_id", referencedColumnName = "order_id")
     private Orders order;
 
-    private Integer quantity;
+    @Column(name = "quantity")
+    private Integer quantity = 0;
+
+    @Column(name = "is_picked")
+    private boolean isPicked = false;
+
+    @Column(name = "quantity_picked")
+    private Integer quantityPicked = 0;
+
+    @Column(name = "is_rejected_order")
+    private boolean isRejectedOrder = false;
 
 }
 
